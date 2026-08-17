@@ -7,7 +7,9 @@ namespace MediTurno.Api.Controllers;
 
 [Route("api/pacientes")]
 [Authorize]
-public class PacientesController(IPacienteService pacienteService) : ApiControllerBase
+public class PacientesController(
+    IPacienteService pacienteService,
+    IAtencionService atencionService) : ApiControllerBase
 {
     [HttpPost]
     [Authorize(Roles = "Administrador,Recepcionista")]
@@ -50,4 +52,12 @@ public class PacientesController(IPacienteService pacienteService) : ApiControll
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Desactivar(int id) =>
         ResponderSinContenido(await pacienteService.DesactivarAsync(id));
+
+    [HttpGet("{id:int}/historial")]
+    [Authorize(Roles = "Administrador,Medico")]
+    [ProducesResponseType(typeof(IReadOnlyList<HistorialItemResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Historial(int id) =>
+        Responder(await atencionService.ObtenerHistorialAsync(id));
 }

@@ -7,7 +7,9 @@ namespace MediTurno.Api.Controllers;
 
 [Route("api/citas")]
 [Authorize]
-public class CitasController(ICitaService citaService) : ApiControllerBase
+public class CitasController(
+    ICitaService citaService,
+    IAtencionService atencionService) : ApiControllerBase
 {
     [HttpPost]
     [Authorize(Roles = "Administrador,Recepcionista")]
@@ -66,4 +68,20 @@ public class CitasController(ICitaService citaService) : ApiControllerBase
     [ProducesResponseType(typeof(int), StatusCodes.Status200OK)]
     public async Task<IActionResult> MarcarAusentes() =>
         Responder(await citaService.MarcarAusentesAsync());
+
+    [HttpPost("{id:int}/atencion")]
+    [Authorize(Roles = "Administrador,Medico")]
+    [ProducesResponseType(typeof(AtencionResponse), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> RegistrarAtencion(int id, [FromBody] RegistrarAtencionRequest request)
+    {
+        var esAdministrador = User.IsInRole("Administrador");
+        var medicoId = int.TryParse(User.FindFirst("medicoId")?.Value, out var valor) ? valor : (int?)null;
+
+        var resultado = await atencionService.RegistrarAsync(id, request, medicoId, esAdministrador);
+        return ResponderCreado(resultado, nameof(ObtenerPorId), new { id });
+    }
 }
