@@ -1,0 +1,507 @@
+{
+  "info": {
+    "name": "MediTurno API",
+    "description": "Colección de pruebas funcionales del Release 1.0 de MediTurno. Ejecute las peticiones en orden: el login guarda el token y cada paso guarda los identificadores que usa el siguiente.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "https://localhost:7001" },
+    { "key": "token", "value": "" },
+    { "key": "pacienteId", "value": "" },
+    { "key": "medicoId", "value": "" },
+    { "key": "citaId", "value": "" },
+    { "key": "fechaCita", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "01 - Login como Recepcionista",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Responde 200', () => pm.response.to.have.status(200));",
+              "const cuerpo = pm.response.json();",
+              "pm.test('Devuelve token', () => pm.expect(cuerpo.token).to.be.a('string').and.not.empty);",
+              "pm.test('Devuelve el rol', () => pm.expect(cuerpo.rol).to.eql('Recepcionista'));",
+              "pm.collectionVariables.set('token', cuerpo.token);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"correo\": \"recepcion@mediturno.do\",\n  \"password\": \"Recepcion123*\"\n}"
+        },
+        "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "auth", "login"] }
+      }
+    },
+    {
+      "name": "02 - Login con contraseña incorrecta (401)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Responde 401', () => pm.response.to.have.status(401));",
+              "pm.test('Mensaje genérico', () => pm.expect(pm.response.text()).to.include('Credenciales inválidas'));",
+              "pm.test('No devuelve token', () => pm.expect(pm.response.text()).to.not.include('token'));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"correo\": \"recepcion@mediturno.do\",\n  \"password\": \"claveErrada123\"\n}"
+        },
+        "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "auth", "login"] }
+      }
+    },
+    {
+      "name": "03 - Acceso sin token (401)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": ["pm.test('Responde 401', () => pm.response.to.have.status(401));"]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "url": { "raw": "{{baseUrl}}/api/pacientes", "host": ["{{baseUrl}}"], "path": ["api", "pacientes"] }
+      }
+    },
+    {
+      "name": "04 - Registrar paciente",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const sufijo = String(Date.now()).slice(-7);",
+              "pm.collectionVariables.set('cedula', '402' + sufijo + '1');"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Responde 201', () => pm.response.to.have.status(201));",
+              "const cuerpo = pm.response.json();",
+              "pm.test('Queda activo', () => pm.expect(cuerpo.activo).to.be.true);",
+              "pm.collectionVariables.set('pacienteId', cuerpo.id);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"cedula\": \"{{cedula}}\",\n  \"nombre\": \"Ana\",\n  \"apellido\": \"Martínez\",\n  \"fechaNacimiento\": \"1992-04-15\",\n  \"telefono\": \"8095551234\",\n  \"correo\": \"ana.martinez@correo.do\"\n}"
+        },
+        "url": { "raw": "{{baseUrl}}/api/pacientes", "host": ["{{baseUrl}}"], "path": ["api", "pacientes"] }
+      }
+    },
+    {
+      "name": "05 - Registrar paciente con cédula duplicada (409)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Responde 409', () => pm.response.to.have.status(409));",
+              "pm.test('Indica la causa', () => pm.expect(pm.response.text()).to.include('cédula'));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"cedula\": \"{{cedula}}\",\n  \"nombre\": \"Ana\",\n  \"apellido\": \"Martínez\",\n  \"fechaNacimiento\": \"1992-04-15\",\n  \"telefono\": \"8095551234\",\n  \"correo\": \"ana.martinez@correo.do\"\n}"
+        },
+        "url": { "raw": "{{baseUrl}}/api/pacientes", "host": ["{{baseUrl}}"], "path": ["api", "pacientes"] }
+      }
+    },
+    {
+      "name": "06 - Listar médicos",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Responde 200', () => pm.response.to.have.status(200));",
+              "const medicos = pm.response.json();",
+              "const carmen = medicos.find(m => m.exequatur === 'EXQ-1001');",
+              "pm.test('Existe la médica semilla', () => pm.expect(carmen).to.not.be.undefined);",
+              "pm.collectionVariables.set('medicoId', carmen.id);",
+              "",
+              "const fecha = new Date();",
+              "fecha.setDate(fecha.getDate() + 7);",
+              "while (fecha.getDay() === 0 || fecha.getDay() === 6) { fecha.setDate(fecha.getDate() + 1); }",
+              "const iso = fecha.toISOString().slice(0, 10);",
+              "pm.collectionVariables.set('fecha', iso);",
+              "pm.collectionVariables.set('fechaCita', iso + 'T09:00:00');"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": { "raw": "{{baseUrl}}/api/medicos", "host": ["{{baseUrl}}"], "path": ["api", "medicos"] }
+      }
+    },
+    {
+      "name": "07 - Consultar disponibilidad",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Responde 200', () => pm.response.to.have.status(200));",
+              "const bloques = pm.response.json();",
+              "pm.test('Devuelve bloques', () => pm.expect(bloques.length).to.be.above(0));",
+              "pm.test('Incluye el bloque de las 09:00', () => pm.expect(bloques.some(b => b.hora === '09:00:00')).to.be.true);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": {
+          "raw": "{{baseUrl}}/api/medicos/{{medicoId}}/disponibilidad?fecha={{fecha}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "medicos", "{{medicoId}}", "disponibilidad"],
+          "query": [{ "key": "fecha", "value": "{{fecha}}" }]
+        }
+      }
+    },
+    {
+      "name": "08 - Reservar cita",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Responde 201', () => pm.response.to.have.status(201));",
+              "const cita = pm.response.json();",
+              "pm.test('Queda pendiente', () => pm.expect(cita.estado).to.eql('Pendiente'));",
+              "pm.collectionVariables.set('citaId', cita.id);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"pacienteId\": {{pacienteId}},\n  \"medicoId\": {{medicoId}},\n  \"fechaHora\": \"{{fechaCita}}\",\n  \"motivoConsulta\": \"Chequeo general de rutina\"\n}"
+        },
+        "url": { "raw": "{{baseUrl}}/api/citas", "host": ["{{baseUrl}}"], "path": ["api", "citas"] }
+      }
+    },
+    {
+      "name": "09 - Reservar el mismo bloque (409)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Responde 409', () => pm.response.to.have.status(409));",
+              "pm.test('Explica el conflicto', () => pm.expect(pm.response.text()).to.include('ya no está disponible'));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"pacienteId\": {{pacienteId}},\n  \"medicoId\": {{medicoId}},\n  \"fechaHora\": \"{{fechaCita}}\",\n  \"motivoConsulta\": \"Segunda reserva en el mismo bloque\"\n}"
+        },
+        "url": { "raw": "{{baseUrl}}/api/citas", "host": ["{{baseUrl}}"], "path": ["api", "citas"] }
+      }
+    },
+    {
+      "name": "10 - El bloque ya no aparece disponible",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Responde 200', () => pm.response.to.have.status(200));",
+              "const bloques = pm.response.json();",
+              "pm.test('El bloque de las 09:00 fue descontado', () => pm.expect(bloques.some(b => b.hora === '09:00:00')).to.be.false);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": {
+          "raw": "{{baseUrl}}/api/medicos/{{medicoId}}/disponibilidad?fecha={{fecha}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "medicos", "{{medicoId}}", "disponibilidad"],
+          "query": [{ "key": "fecha", "value": "{{fecha}}" }]
+        }
+      }
+    },
+    {
+      "name": "11 - Confirmar la cita",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Responde 200', () => pm.response.to.have.status(200));",
+              "pm.test('Queda confirmada', () => pm.expect(pm.response.json().estado).to.eql('Confirmada'));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": {
+          "raw": "{{baseUrl}}/api/citas/{{citaId}}/confirmar",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "citas", "{{citaId}}", "confirmar"]
+        }
+      }
+    },
+    {
+      "name": "12 - Confirmar de nuevo (409)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": ["pm.test('Responde 409', () => pm.response.to.have.status(409));"]
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": {
+          "raw": "{{baseUrl}}/api/citas/{{citaId}}/confirmar",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "citas", "{{citaId}}", "confirmar"]
+        }
+      }
+    },
+    {
+      "name": "13 - Cancelar sin motivo (400)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": ["pm.test('Responde 400', () => pm.response.to.have.status(400));"]
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "body": { "mode": "raw", "raw": "{\n  \"motivo\": \"\"\n}" },
+        "url": {
+          "raw": "{{baseUrl}}/api/citas/{{citaId}}/cancelar",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "citas", "{{citaId}}", "cancelar"]
+        }
+      }
+    },
+    {
+      "name": "14 - Login como Médico",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Responde 200', () => pm.response.to.have.status(200));",
+              "pm.collectionVariables.set('tokenMedico', pm.response.json().token);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"correo\": \"carmen.reyes@mediturno.do\",\n  \"password\": \"Medico123*\"\n}"
+        },
+        "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "auth", "login"] }
+      }
+    },
+    {
+      "name": "15 - Registrar la atención",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Responde 201', () => pm.response.to.have.status(201));",
+              "pm.test('Guarda el diagnóstico', () => pm.expect(pm.response.json().diagnostico).to.include('Hipertensión'));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{tokenMedico}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"motivo\": \"Control de presión arterial\",\n  \"diagnostico\": \"Hipertensión controlada\",\n  \"observaciones\": \"Continuar tratamiento actual\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/citas/{{citaId}}/atencion",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "citas", "{{citaId}}", "atencion"]
+        }
+      }
+    },
+    {
+      "name": "16 - Consultar el historial del paciente",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Responde 200', () => pm.response.to.have.status(200));",
+              "pm.test('Tiene al menos una atención', () => pm.expect(pm.response.json().length).to.be.above(0));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{tokenMedico}}" }],
+        "url": {
+          "raw": "{{baseUrl}}/api/pacientes/{{pacienteId}}/historial",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "pacientes", "{{pacienteId}}", "historial"]
+        }
+      }
+    },
+    {
+      "name": "17 - El Médico no puede ver reportes (403)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": ["pm.test('Responde 403', () => pm.response.to.have.status(403));"]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{tokenMedico}}" }],
+        "url": {
+          "raw": "{{baseUrl}}/api/reportes/citas?desde=2026-01-01&hasta=2026-12-31",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "reportes", "citas"],
+          "query": [
+            { "key": "desde", "value": "2026-01-01" },
+            { "key": "hasta", "value": "2026-12-31" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "18 - Reporte de citas como Administrador",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.sendRequest({",
+              "  url: pm.collectionVariables.get('baseUrl') + '/api/auth/login',",
+              "  method: 'POST',",
+              "  header: { 'Content-Type': 'application/json' },",
+              "  body: { mode: 'raw', raw: JSON.stringify({ correo: 'admin@mediturno.do', password: 'Admin123*' }) }",
+              "}, (err, res) => { if (!err) pm.collectionVariables.set('tokenAdmin', res.json().token); });"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Responde 200', () => pm.response.to.have.status(200));",
+              "const r = pm.response.json();",
+              "pm.test('El total cuadra con la suma por estado', () => pm.expect(r.total).to.eql(r.pendientes + r.confirmadas + r.atendidas + r.canceladas + r.ausentes));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{tokenAdmin}}" }],
+        "url": {
+          "raw": "{{baseUrl}}/api/reportes/citas?desde=2026-01-01&hasta=2026-12-31",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "reportes", "citas"],
+          "query": [
+            { "key": "desde", "value": "2026-01-01" },
+            { "key": "hasta", "value": "2026-12-31" }
+          ]
+        }
+      }
+    }
+  ]
+}
