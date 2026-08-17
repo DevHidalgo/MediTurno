@@ -23,6 +23,8 @@ builder.Services.AddSingleton<IPasswordHasher<Usuario>, PasswordHasher<Usuario>>
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IPacienteService, PacienteService>();
+builder.Services.AddScoped<ICatalogoService, CatalogoService>();
+builder.Services.AddScoped<IDisponibilidadService, DisponibilidadService>();
 
 var jwt = builder.Configuration
     .GetSection(JwtOptions.SeccionConfiguracion)
