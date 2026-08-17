@@ -37,10 +37,12 @@ public sealed class Escenario : IDisposable
     public MediTurnoDbContext Db { get; }
     public Mock<IRelojSistema> Reloj { get; }
 
-    public IPacienteService Pacientes => new PacienteService(Db, Reloj.Object);
-    public ICatalogoService Catalogo => new CatalogoService(Db);
     public IDisponibilidadService Disponibilidad => new DisponibilidadService(Db, Reloj.Object);
     public ICitaService Citas => new CitaService(Db, Disponibilidad, Reloj.Object);
+    public IPacienteService Pacientes => new PacienteService(Db, Reloj.Object);
+    public ICatalogoService Catalogo => new CatalogoService(Db);
+    public IAtencionService Atenciones => new AtencionService(Db, Reloj.Object);
+    public IReporteService Reportes => new ReporteService(Db);
 
     public IPasswordHasher<Usuario> Hasher { get; } = new PasswordHasher<Usuario>();
 

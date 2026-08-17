@@ -26,6 +26,8 @@ builder.Services.AddScoped<IPacienteService, PacienteService>();
 builder.Services.AddScoped<ICatalogoService, CatalogoService>();
 builder.Services.AddScoped<IDisponibilidadService, DisponibilidadService>();
 builder.Services.AddScoped<ICitaService, CitaService>();
+builder.Services.AddScoped<IAtencionService, AtencionService>();
+builder.Services.AddScoped<IReporteService, ReporteService>();
 
 var jwt = builder.Configuration
     .GetSection(JwtOptions.SeccionConfiguracion)
