@@ -40,6 +40,7 @@ public sealed class Escenario : IDisposable
     public IPacienteService Pacientes => new PacienteService(Db, Reloj.Object);
     public ICatalogoService Catalogo => new CatalogoService(Db);
     public IDisponibilidadService Disponibilidad => new DisponibilidadService(Db, Reloj.Object);
+    public ICitaService Citas => new CitaService(Db, Disponibilidad, Reloj.Object);
 
     public IPasswordHasher<Usuario> Hasher { get; } = new PasswordHasher<Usuario>();
 
