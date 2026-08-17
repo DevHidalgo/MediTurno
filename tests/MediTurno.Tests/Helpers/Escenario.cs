@@ -13,6 +13,7 @@ namespace MediTurno.Tests.Helpers;
 public sealed class Escenario : IDisposable
 {
     public static readonly DateTime LunesOchoAm = new(2026, 8, 17, 8, 0, 0);
+    public static readonly DateOnly Martes = new(2026, 8, 18);
 
     private readonly SqliteConnection _conexion;
 
@@ -37,6 +38,8 @@ public sealed class Escenario : IDisposable
     public Mock<IRelojSistema> Reloj { get; }
 
     public IPacienteService Pacientes => new PacienteService(Db, Reloj.Object);
+    public ICatalogoService Catalogo => new CatalogoService(Db);
+    public IDisponibilidadService Disponibilidad => new DisponibilidadService(Db, Reloj.Object);
 
     public IPasswordHasher<Usuario> Hasher { get; } = new PasswordHasher<Usuario>();
 
@@ -52,6 +55,46 @@ public sealed class Escenario : IDisposable
             }),
             Reloj.Object),
         Hasher);
+
+    public Medico CrearMedico(
+        int duracionMinutos = 30,
+        TimeOnly? desde = null,
+        TimeOnly? hasta = null,
+        DayOfWeek[]? dias = null,
+        string exequatur = "EXQ-9001")
+    {
+        var especialidad = new Especialidad { Nombre = $"Especialidad {exequatur}" };
+        Db.Especialidades.Add(especialidad);
+        Db.SaveChanges();
+
+        var medico = new Medico
+        {
+            NombreCompleto = "Dra. Prueba",
+            Exequatur = exequatur,
+            EspecialidadId = especialidad.Id,
+            DuracionConsultaMinutos = duracionMinutos,
+            Activo = true
+        };
+
+        Db.Medicos.Add(medico);
+        Db.SaveChanges();
+
+        foreach (var dia in dias ?? [DayOfWeek.Tuesday])
+        {
+            Db.HorariosAtencion.Add(new HorarioAtencion
+            {
+                MedicoId = medico.Id,
+                DiaSemana = dia,
+                HoraInicio = desde ?? new TimeOnly(8, 0),
+                HoraFin = hasta ?? new TimeOnly(12, 0)
+            });
+        }
+
+        Db.SaveChanges();
+        Db.ChangeTracker.Clear();
+
+        return Db.Medicos.Include(m => m.Horarios).First(m => m.Id == medico.Id);
+    }
 
     public Paciente CrearPaciente(string cedula = "40200000001", bool activo = true)
     {
@@ -71,6 +114,25 @@ public sealed class Escenario : IDisposable
         Db.SaveChanges();
 
         return paciente;
+    }
+
+    public Cita CrearCita(int pacienteId, int medicoId, DateTime fechaHora, EstadoCita estado = EstadoCita.Pendiente)
+    {
+        var cita = new Cita
+        {
+            PacienteId = pacienteId,
+            MedicoId = medicoId,
+            FechaHora = fechaHora,
+            Estado = estado,
+            MotivoConsulta = "Consulta de prueba",
+            FechaCreacion = Ahora
+        };
+
+        Db.Citas.Add(cita);
+        Db.SaveChanges();
+        Db.ChangeTracker.Clear();
+
+        return cita;
     }
 
     public Usuario CrearUsuario(string correo, string password, RolUsuario rol, bool activo = true, int? medicoId = null)
