@@ -22,6 +22,7 @@ builder.Services.AddSingleton<IRelojSistema, RelojSistema>();
 builder.Services.AddSingleton<IPasswordHasher<Usuario>, PasswordHasher<Usuario>>();
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IPacienteService, PacienteService>();
 
 var jwt = builder.Configuration
     .GetSection(JwtOptions.SeccionConfiguracion)

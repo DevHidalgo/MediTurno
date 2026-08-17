@@ -36,6 +36,8 @@ public sealed class Escenario : IDisposable
     public MediTurnoDbContext Db { get; }
     public Mock<IRelojSistema> Reloj { get; }
 
+    public IPacienteService Pacientes => new PacienteService(Db, Reloj.Object);
+
     public IPasswordHasher<Usuario> Hasher { get; } = new PasswordHasher<Usuario>();
 
     public IAuthService Auth => new AuthService(
@@ -50,6 +52,26 @@ public sealed class Escenario : IDisposable
             }),
             Reloj.Object),
         Hasher);
+
+    public Paciente CrearPaciente(string cedula = "40200000001", bool activo = true)
+    {
+        var paciente = new Paciente
+        {
+            Cedula = cedula,
+            Nombre = "Paciente",
+            Apellido = "Prueba",
+            FechaNacimiento = new DateOnly(1990, 1, 1),
+            Telefono = "8090000000",
+            Correo = $"{cedula}@correo.do",
+            Activo = activo,
+            FechaRegistro = Ahora
+        };
+
+        Db.Pacientes.Add(paciente);
+        Db.SaveChanges();
+
+        return paciente;
+    }
 
     public Usuario CrearUsuario(string correo, string password, RolUsuario rol, bool activo = true, int? medicoId = null)
     {
